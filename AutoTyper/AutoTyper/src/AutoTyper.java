@@ -1,13 +1,9 @@
 import java.awt.*;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
-import java.awt.event.KeyEvent;
+import java.awt.datatransfer.*;
+import java.awt.event.*;
 import java.util.*;
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.JTableHeader;
-import javax.swing.table.TableCellRenderer;
+import javax.swing.border.*;
 
 public class AutoTyper {
 
@@ -23,8 +19,8 @@ public class AutoTyper {
 
     private static JFrame frame;
     private static JPanel inputPanel;
-    private static JPanel historyPanel;
     private static JPanel preferencesPanel;
+    private static JPanel historyPanel;
     private static JTabbedPane tabbedPane;
     private static JProgressBar progressBar;
     private static JLabel timeRemainingLabel;
@@ -33,6 +29,9 @@ public class AutoTyper {
     private static JTextField textField3;
     private static JCheckBox alwaysOnTopCheckBox;
     private static JCheckBox darkModeCheckBox;
+    private static JCheckBox wrapTextCheckBox;
+    private static JList<String> historyList;
+    private static DefaultListModel<String> historyListModel;
 
     static {
         // Populate the key map with relevant key codes for characters
@@ -83,14 +82,17 @@ public class AutoTyper {
             e.printStackTrace();
         }
 
+        // Set tooltip initial delay to a lower value (e.g., 200 milliseconds)
+        ToolTipManager.sharedInstance().setInitialDelay(200);
+
         frame = new JFrame("Auto Typer");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 600);
         frame.setLocationRelativeTo(null);
 
         inputPanel = createInputPanel();
-        historyPanel = createHistoryPanel();
         preferencesPanel = createPreferencesPanel();
+        historyPanel = createHistoryPanel();
 
         tabbedPane = new JTabbedPane();
         tabbedPane.addTab("Input", inputPanel);
@@ -121,27 +123,60 @@ public class AutoTyper {
         textArea1 = createTextAreaWithContextMenu(5, 20);
         JScrollPane scrollPane1 = new JScrollPane(textArea1);
 
+        // Create a panel for the label and info icon for the text area
+        JPanel textAreaLabelPanel = createLabelWithInfoIcon("Enter the text to type:", "Enter the text you want to be automatically typed.");
         gbc.gridwidth = 2;
-        panel.add(createLabelWithInfoIcon("Enter the text to type:", "Enter the text you want to be automatically typed."), gbc);
+        panel.add(textAreaLabelPanel, gbc);
         gbc.gridy++;
         gbc.gridwidth = 1;
         gbc.weightx = 1;
         gbc.weighty = 1;
         panel.add(scrollPane1, gbc);
 
+        // Clear button for textArea1
+        JButton clearButton1 = new JButton("Clear");
+        clearButton1.setPreferredSize(new Dimension(70, 25)); // Set size for clear button
+        clearButton1.addActionListener(e -> textArea1.setText(""));
+        gbc.gridx = 1;
+        gbc.weightx = 0;
+        gbc.fill = GridBagConstraints.NONE;
+        panel.add(clearButton1, gbc);
+
+        gbc.gridx = 0;
         gbc.weightx = 0;
         gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.BOTH;
         gbc.gridy++;
         panel.add(createLabelWithInfoIcon("Enter the delay before typing starts (in seconds):", "Enter the delay before typing starts (recommended: 3-4 seconds)."), gbc);
         gbc.gridy++;
         textField2 = createTextFieldWithContextMenu(5);
         panel.add(textField2, gbc);
 
+        // Clear button for textField2
+        JButton clearButton2 = new JButton("Clear");
+        clearButton2.setPreferredSize(new Dimension(70, 25)); // Set size for clear button
+        clearButton2.addActionListener(e -> textField2.setText(""));
+        gbc.gridx = 1;
+        gbc.weightx = 0;
+        gbc.fill = GridBagConstraints.NONE;
+        panel.add(clearButton2, gbc);
+
+        gbc.gridx = 0;
         gbc.gridy++;
+        gbc.fill = GridBagConstraints.BOTH;
         panel.add(createLabelWithInfoIcon("Enter the typing speed (interval between keystrokes in milliseconds):", "Enter the typing speed (recommended: 80-100 ms)."), gbc);
         gbc.gridy++;
         textField3 = createTextFieldWithContextMenu(5);
         panel.add(textField3, gbc);
+
+        // Clear button for textField3
+        JButton clearButton3 = new JButton("Clear");
+        clearButton3.setPreferredSize(new Dimension(70, 25)); // Set size for clear button
+        clearButton3.addActionListener(e -> textField3.setText(""));
+        gbc.gridx = 1;
+        gbc.weightx = 0;
+        gbc.fill = GridBagConstraints.NONE;
+        panel.add(clearButton3, gbc);
 
         return panel;
     }
@@ -150,40 +185,35 @@ public class AutoTyper {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        HistoryTableModel historyTableModel = new HistoryTableModel(history);
-        JTable historyTable = new JTable(historyTableModel);
-        historyTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        historyListModel = new DefaultListModel<>();
+        historyList = new JList<>(historyListModel);
+        historyList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        historyList.setCellRenderer(new CustomListCellRenderer(wrapTextCheckBox.isSelected()));
+        JScrollPane scrollPane = new JScrollPane(historyList);
 
-        JScrollPane historyScrollPane = new JScrollPane(historyTable);
-        panel.add(historyScrollPane, BorderLayout.CENTER);
-
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        bottomPanel.add(new JLabel("Clipboard:"));
-
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         JButton copyButton = new JButton("Copy");
-        bottomPanel.add(copyButton);
-
-        JButton clearHistoryButton = new JButton("Clear History");
-        clearHistoryButton.addActionListener(e -> {
-            history.clear();
-            historyTableModel.fireTableDataChanged();
-        });
-        bottomPanel.add(clearHistoryButton);
+        JButton clearButton = new JButton("Clear History");
 
         copyButton.addActionListener(e -> {
-            int selectedRow = historyTable.getSelectedRow();
-            if (selectedRow >= 0) {
-                String text = historyTableModel.getValueAt(selectedRow, 1).toString();
-                StringSelection stringSelection = new StringSelection(text);
+            String selectedValue = historyList.getSelectedValue();
+            if (selectedValue != null) {
+                StringSelection stringSelection = new StringSelection(selectedValue);
                 Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
                 clipboard.setContents(stringSelection, null);
-                addClipboardHistory(text); // Add copied text to clipboard history
-            } else {
-                showWarningWindow("Please select a row from the history to copy.");
             }
         });
 
-        panel.add(bottomPanel, BorderLayout.SOUTH);
+        clearButton.addActionListener(e -> {
+            history.clear();
+            historyListModel.clear();
+        });
+
+        buttonPanel.add(copyButton);
+        buttonPanel.add(clearButton);
+
+        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
 
         return panel;
     }
@@ -192,7 +222,7 @@ public class AutoTyper {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panel.setBorder(new EmptyBorder(10, 10, 10, 10));
         alwaysOnTopCheckBox = new JCheckBox("Always on Top", true);
-        JCheckBox wrapTextCheckBox = new JCheckBox("Wrap Text", true);
+        wrapTextCheckBox = new JCheckBox("Wrap Text", true);
         darkModeCheckBox = new JCheckBox("Dark Mode");
 
         alwaysOnTopCheckBox.addActionListener(e -> SwingUtilities.getWindowAncestor(inputPanel).setAlwaysOnTop(alwaysOnTopCheckBox.isSelected()));
@@ -200,6 +230,9 @@ public class AutoTyper {
             boolean wrap = wrapTextCheckBox.isSelected();
             textArea1.setLineWrap(wrap);
             textArea1.setWrapStyleWord(wrap);
+
+            historyList.setCellRenderer(new CustomListCellRenderer(wrap));
+            historyList.repaint();
         });
 
         darkModeCheckBox.addActionListener(e -> {
@@ -235,6 +268,7 @@ public class AutoTyper {
         // Progress bar and time remaining label
         progressBar = new JProgressBar(0, 100);
         progressBar.setPreferredSize(new Dimension(700, 20));
+        progressBar.setForeground(new Color(191, 98, 4)); // Orange color
         timeRemainingLabel = new JLabel("Time remaining: 00:00", SwingConstants.RIGHT);
         JPanel progressPanel = new JPanel(new BorderLayout());
         progressPanel.add(timeRemainingLabel, BorderLayout.NORTH);
@@ -263,16 +297,19 @@ public class AutoTyper {
         JPanel panel = new JPanel(new BorderLayout());
         JLabel label = new JLabel(labelText);
         JLabel infoIcon = createInfoIcon(tooltipText);
-        panel.add(label, BorderLayout.WEST);
-        panel.add(infoIcon, BorderLayout.EAST);
+        JPanel labelAndIconPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        labelAndIconPanel.add(infoIcon);
+        labelAndIconPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        labelAndIconPanel.add(label);
+        panel.add(labelAndIconPanel, BorderLayout.NORTH);
         return panel;
     }
 
     private static JLabel createInfoIcon(String tooltipText) {
         JLabel infoIcon = new JLabel("\uD83D\uDEC8"); // Unicode for information icon
         infoIcon.setToolTipText(tooltipText);
-        infoIcon.setHorizontalAlignment(SwingConstants.RIGHT);
-        infoIcon.setPreferredSize(new Dimension(30, 30)); // Increase icon size
+        infoIcon.setHorizontalAlignment(SwingConstants.LEFT);
+        infoIcon.setPreferredSize(new Dimension(20, 20)); // Increase icon size
         return infoIcon;
     }
 
@@ -356,7 +393,7 @@ public class AutoTyper {
                 startButton.setVisible(false);
                 pauseButton.setVisible(true);
                 stopButton.setVisible(true);
-                progressBar.setForeground(Color.GREEN);
+                progressBar.setForeground(new Color(191, 98, 4)); // Orange color
 
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane optionPane = new JOptionPane("Switch to the target window. Typing will start after the specified delay.", JOptionPane.INFORMATION_MESSAGE, JOptionPane.DEFAULT_OPTION);
@@ -377,11 +414,7 @@ public class AutoTyper {
                                         }
                                     }
                                     char c = textToType.charAt(i);
-                                    int delay = typingSpeed;
-
-                                    if (random.nextBoolean()) {
-                                        delay += random.nextInt(61) - 30;
-                                    }
+                                    int delay = typingSpeed + random.nextInt(61) - 30; // Randomized delay for each character
 
                                     if (Character.isUpperCase(c) || "!@#$%^&*()_+{}|:\"<>?".indexOf(c) >= 0) {
                                         robot.keyPress(KeyEvent.VK_SHIFT);
@@ -416,6 +449,12 @@ public class AutoTyper {
                                         frame.setAlwaysOnTop(true);
                                     }
                                 });
+
+                                // Add the typed text to history
+                                if (!textToType.isEmpty()) {
+                                    history.add(textToType);
+                                    historyListModel.addElement(textToType);
+                                }
                             } catch (InterruptedException ex) {
                                 ex.printStackTrace();
                             }
@@ -444,7 +483,7 @@ public class AutoTyper {
                         pauseLock.notifyAll();
                     }
                     pauseButton.setText("Pause");
-                    progressBar.setForeground(Color.GREEN);
+                    progressBar.setForeground(new Color(191, 98, 4)); // Orange color
                 } catch (InterruptedException ex) {
                     ex.printStackTrace();
                 }
@@ -523,7 +562,6 @@ public class AutoTyper {
     private static void updateUI() {
         SwingUtilities.updateComponentTreeUI(frame);
         updateComponentTreeUI(frame.getContentPane());
-        updateTableHeaders();
     }
 
     private static void updateComponentTreeUI(Component component) {
@@ -533,13 +571,6 @@ public class AutoTyper {
                 updateComponentTreeUI(child);
             }
         }
-    }
-
-    private static void updateTableHeaders() {
-        JTable historyTable = (JTable) ((JScrollPane) historyPanel.getComponent(0)).getViewport().getView();
-        JTableHeader header = historyTable.getTableHeader();
-        header.setBackground(UIManager.getColor("control"));
-        header.setForeground(UIManager.getColor("text"));
     }
 
     private static void showWarningWindow(String message) {
@@ -573,59 +604,31 @@ public class AutoTyper {
         return String.format("%02d:%02d", minutes, seconds);
     }
 
-    static class HistoryTableModel extends AbstractTableModel {
-        private final java.util.List<String> history;
-        private final String[] columnNames = {"Index", "Typed Text"};
+    private static class CustomListCellRenderer extends JPanel implements ListCellRenderer<String> {
+        private JLabel label;
+        private boolean wrapText;
+        private static final Color ORANGE_COLOR = new Color(191, 98, 4);
 
-        public HistoryTableModel(java.util.List<String> history) {
-            this.history = history;
+        public CustomListCellRenderer(boolean wrapText) {
+            this.wrapText = wrapText;
+            setLayout(new BorderLayout());
+            label = new JLabel();
+            label.setBorder(new EmptyBorder(5, 5, 5, 5));
+            label.setForeground(Color.BLACK); // Set text color to black
+            add(label, BorderLayout.CENTER);
+            setBorder(new MatteBorder(0, 0, 1, 0, Color.GRAY));
         }
 
         @Override
-        public int getRowCount() {
-            return history.size();
-        }
-
-        @Override
-        public int getColumnCount() {
-            return columnNames.length;
-        }
-
-        @Override
-        public Object getValueAt(int rowIndex, int columnIndex) {
-            switch (columnIndex) {
-                case 0:
-                    return rowIndex + 1;
-                case 1:
-                    return history.get(rowIndex);
-                default:
-                    return null;
-            }
-        }
-
-        @Override
-        public String getColumnName(int column) {
-            return columnNames[column];
-        }
-
-        @Override
-        public void fireTableDataChanged() {
-            super.fireTableDataChanged();
-        }
-    }
-
-    static class TextAreaRenderer extends JTextArea implements TableCellRenderer {
-        public TextAreaRenderer() {
-            setLineWrap(true);
-            setWrapStyleWord(true);
-        }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            setText(value != null ? value.toString() : "");
-            setSize(table.getColumnModel().getColumn(column).getWidth(), getPreferredSize().height);
-            if (table.getRowHeight(row) != getPreferredSize().height) {
-                table.setRowHeight(row, getPreferredSize().height);
+        public Component getListCellRendererComponent(JList<? extends String> list, String value, int index, boolean isSelected, boolean cellHasFocus) {
+            label.setText("<html>" + value.replaceAll("\n", "<br>") + "</html>");
+            label.setHorizontalAlignment(SwingConstants.LEFT);
+            setBackground(isSelected ? ORANGE_COLOR : list.getBackground());
+            label.setForeground(isSelected ? Color.WHITE : Color.BLACK);
+            if (isSelected) {
+                setBorder(new LineBorder(ORANGE_COLOR, 2));
+            } else {
+                setBorder(new MatteBorder(0, 0, 1, 0, Color.GRAY));
             }
             return this;
         }
