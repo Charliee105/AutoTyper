@@ -144,7 +144,7 @@ public class ScreenshotToAI {
             connection.setRequestMethod("POST");
             connection.setDoOutput(true);
             connection.setRequestProperty("Content-Type", "application/json");
-            connection.setRequestProperty("Authorization", "Bearer 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");
+            connection.setRequestProperty("Authorization", "Bearer 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");
 
             String jsonBody = "{" +
                     "\"model\": \"gpt-3.5-turbo\"," +
