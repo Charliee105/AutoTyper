@@ -21,13 +21,14 @@ public class AutoTyper {
     private static JPanel inputPanel;
     private static JPanel preferencesPanel;
     private static JPanel historyPanel;
+    private static JPanel runScript2Panel;
     private static JTabbedPane tabbedPane;
     private static JProgressBar progressBar;
     private static JLabel timeRemainingLabel;
     private static JTextArea textArea1;
     private static JTextField textField2;
     private static JTextField textField3;
-    private static JCheckBox alwaysOnTopCheckBox;
+   // private static JCheckBox alwaysOnTopCheckBox;
     private static JCheckBox darkModeCheckBox;
     private static JCheckBox wrapTextCheckBox;
     private static JList<String> historyList;
@@ -93,11 +94,14 @@ public class AutoTyper {
         inputPanel = createInputPanel();
         preferencesPanel = createPreferencesPanel();
         historyPanel = createHistoryPanel();
+        runScript2Panel = createRunScript2Panel();
 
         tabbedPane = new JTabbedPane();
         tabbedPane.addTab("Input", inputPanel);
+        tabbedPane.addTab("Ask AI", runScript2Panel);
         tabbedPane.addTab("History", historyPanel);
         tabbedPane.addTab("Preferences", preferencesPanel);
+        
 
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
@@ -108,7 +112,34 @@ public class AutoTyper {
         frame.add(mainPanel);
         frame.setVisible(true);
 
-        frame.setAlwaysOnTop(true); // Enable always on top by default
+        //frame.setAlwaysOnTop(true); // Enable always on top by default
+    }
+
+    private static JPanel createRunScript2Panel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        JLabel label = new JLabel("Ask AI");
+        label.setFont(new Font("Arial", Font.BOLD, 18));
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        panel.add(label, BorderLayout.NORTH);
+
+        JButton runScriptButton = new JButton("Open");
+        runScriptButton.setFont(new Font("Arial", Font.PLAIN, 16));
+        runScriptButton.setFocusPainted(false);
+        runScriptButton.addActionListener(e -> runScript2());
+        panel.add(runScriptButton, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private static void runScript2() {
+        try {
+            ScreenshotToAI.main(new String[]{});
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(frame, "Failed to run Script 2: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
     }
 
     private static JPanel createInputPanel() {
@@ -221,11 +252,11 @@ public class AutoTyper {
     private static JPanel createPreferencesPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        alwaysOnTopCheckBox = new JCheckBox("Always on Top", true);
+       // alwaysOnTopCheckBox = new JCheckBox("Always on Top", true);
         wrapTextCheckBox = new JCheckBox("Wrap Text", true);
         darkModeCheckBox = new JCheckBox("Dark Mode");
 
-        alwaysOnTopCheckBox.addActionListener(e -> SwingUtilities.getWindowAncestor(inputPanel).setAlwaysOnTop(alwaysOnTopCheckBox.isSelected()));
+        /*alwaysOnTopCheckBox.addActionListener(e -> SwingUtilities.getWindowAncestor(inputPanel).setAlwaysOnTop(alwaysOnTopCheckBox.isSelected()));
         wrapTextCheckBox.addActionListener(e -> {
             boolean wrap = wrapTextCheckBox.isSelected();
             textArea1.setLineWrap(wrap);
@@ -233,7 +264,7 @@ public class AutoTyper {
 
             historyList.setCellRenderer(new CustomListCellRenderer(wrap));
             historyList.repaint();
-        });
+        });*/
 
         darkModeCheckBox.addActionListener(e -> {
             if (darkModeCheckBox.isSelected()) {
@@ -243,7 +274,7 @@ public class AutoTyper {
             }
         });
 
-        panel.add(alwaysOnTopCheckBox);
+        //panel.add(alwaysOnTopCheckBox);
         panel.add(wrapTextCheckBox);
         panel.add(darkModeCheckBox);
 
@@ -398,7 +429,7 @@ public class AutoTyper {
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane optionPane = new JOptionPane("Switch to the target window. Typing will start after the specified delay.", JOptionPane.INFORMATION_MESSAGE, JOptionPane.DEFAULT_OPTION);
                     JDialog dialog = optionPane.createDialog("Information");
-                    dialog.setAlwaysOnTop(true); // Ensure the dialog is always on top
+                   // dialog.setAlwaysOnTop(true); // Ensure the dialog is always on top
                     dialog.setVisible(true);
 
                     javax.swing.Timer timer = new javax.swing.Timer(originalDelay, event -> {
@@ -437,17 +468,17 @@ public class AutoTyper {
                                 }
                                 isRunning = false;
                                 SwingUtilities.invokeLater(() -> {
-                                    frame.setAlwaysOnTop(true);
-                                    frame.setAlwaysOnTop(false);
+                                    //frame.setAlwaysOnTop(true);
+                                    //frame.setAlwaysOnTop(false);
                                     setFieldsEditable(true, textArea1, textField2, textField3);
                                     startButton.setVisible(true);
                                     pauseButton.setVisible(false);
                                     stopButton.setVisible(false);
                                     progressBar.setValue(0);
                                     timeRemainingLabel.setText("Time remaining: 00:00");
-                                    if (alwaysOnTopCheckBox.isSelected()) {
-                                        frame.setAlwaysOnTop(true);
-                                    }
+                                    //if (alwaysOnTopCheckBox.isSelected()) {
+                                       // frame.setAlwaysOnTop(true);
+                                   // }
                                 });
 
                                 // Add the typed text to history
@@ -505,9 +536,9 @@ public class AutoTyper {
             stopButton.setVisible(false);
             progressBar.setValue(0);
             timeRemainingLabel.setText("Time remaining: 00:00");
-            if (alwaysOnTopCheckBox.isSelected()) {
-                frame.setAlwaysOnTop(true);
-            }
+            //if (alwaysOnTopCheckBox.isSelected()) {
+                //frame.setAlwaysOnTop(true);
+           // }
         }
     }
 
@@ -576,7 +607,7 @@ public class AutoTyper {
     private static void showWarningWindow(String message) {
         JOptionPane optionPane = new JOptionPane(message, JOptionPane.WARNING_MESSAGE, JOptionPane.DEFAULT_OPTION);
         JDialog dialog = optionPane.createDialog("Warning");
-        dialog.setAlwaysOnTop(true); // Ensure the dialog is always on top
+        //dialog.setAlwaysOnTop(true); // Ensure the dialog is always on top
         dialog.setVisible(true);
     }
 
